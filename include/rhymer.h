@@ -94,10 +94,9 @@ public:
         std::vector<std::string> matches;
         
         auto const i = dictionary_.find(word);
+        
         if(i != dictionary_.end())
         {
-            phonemes const pronunciation = i->second;
-            
             std::function<void (trie const&, phonemes::const_reverse_iterator, phonemes::const_reverse_iterator)> traverse;
             
             traverse = [&](trie const& t, phonemes::const_reverse_iterator b, phonemes::const_reverse_iterator e)
@@ -135,6 +134,8 @@ public:
                     traverse(m->second, std::next(b), e);
                 }
             };
+            
+            phonemes const pronunciation = i->second;
             
             // Get a reverse iterator one past last vowel sound.
             auto const v = std::next(std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend()));
