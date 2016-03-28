@@ -118,7 +118,7 @@ public:
 
                 for(auto const& p : t.children_)
                 {
-                    if(p.first != m->first)
+                    if(m == t.children_.end() || p.first != m->first)
                     {
                         f(p.second);
                     }
