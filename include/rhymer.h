@@ -38,14 +38,22 @@
 #include <string>
 #include <vector>
 
+namespace std
+{
+    istream& operator>>(istream&, array<char, 2>&);
+    
+    ostream& operator<<(ostream&, array<char, 2> const&);
+}
+
 class rhymer
 {
 public:
     using phoneme = std::array<char, 2>;
     using phonemes = std::vector<phoneme>;
     
-    rhymer(std::ifstream&& phoneme_dictionary)
+    rhymer(std::ifstream&& phoneme_dictionary, std::ifstream&& phonemes_description)
     {
+        // Build trie to map phonemes to words.
         std::string line, word;
         std::stringstream ss;
         phonemes pronunciation;
@@ -63,7 +71,21 @@ public:
 
             reverse(pronunciation.begin(), pronunciation.end());
             lookup_.insert(pronunciation)->words_.push_back(word);
+        }
+
+        // Save which phonemes represent vowels.
+        phoneme p;
+        std::string description;
+        
+        while(phonemes_description)
+        {
+            phonemes_description >> p;
+            phonemes_description >> description;
             
+            if(description == "vowel")
+            {
+                vowels_.push_back(p);
+            }
         }
     }
     
@@ -94,7 +116,7 @@ public:
                 
                 // Append all words from the given trie's children, skipping over the given phoneme.
                 auto const m = (b == e) ? t.children_.end() : t.children_.find(*b);
-                
+
                 for(auto const& p : t.children_)
                 {
                     if(p.first != m->first)
@@ -114,7 +136,18 @@ public:
                 }
             };
             
-            traverse(lookup_.children_.find(*pronunciation.crbegin())->second, std::next(pronunciation.crbegin()), pronunciation.crend());
+            // Get a reverse iterator one past last vowel sound.
+            auto const v = std::next(std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend()));
+            
+            // Navigate the trie from the last phoneme of the pronunciation to that vowel.
+            trie const* t = &lookup_;
+            for_each(pronunciation.crbegin(), v, [&](phoneme const& p)
+                     {
+                         t = &t->children_.find(p)->second;
+                     });
+            
+            // Find all words within that trie.
+            traverse(*t, v, pronunciation.crend());
         }
         
         return matches;
@@ -150,6 +183,7 @@ private:
         std::vector<std::string> words_;
     } lookup_;
     
+    phonemes vowels_;
     std::map<std::string, phonemes> dictionary_;
 };
 
