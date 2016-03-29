@@ -98,7 +98,6 @@ public:
         if(i != dictionary_.end())
         {
             std::function<void (trie const&, phonemes::const_reverse_iterator, phonemes::const_reverse_iterator)> traverse;
-            
             traverse = [&](trie const& t, phonemes::const_reverse_iterator b, phonemes::const_reverse_iterator e)
             {
                 // Recursive function to copy all words from a trie, starting with its children.
@@ -113,25 +112,33 @@ public:
                     matches.insert(matches.end(), s.words_.begin(), s.words_.end());
                 };
                 
-                // Append all words from the given trie's children, skipping over the given phoneme.
-                auto const m = (b == e) ? t.children_.end() : t.children_.find(*b);
-
-                for(auto const& p : t.children_)
+                if(b != e)
                 {
-                    if(m == t.children_.end() || p.first != m->first)
+                    // Append all words from the given trie's children, skipping over the given phoneme.
+                    auto const m = t.children_.find(*b);
+                    
+                    for(auto const& p : t.children_)
+                    {
+                        if(p.first != m->first)
+                        {
+                            f(p.second);
+                        }
+                    }
+                    
+                    // Append all words from the given trie.
+                    auto const w = t.words_;
+                    matches.insert(matches.end(), w.begin(), w.end());
+                    
+                    // Recursively call traverse with the given phoneme from the given trie's children.
+                    traverse(m->second, std::next(b), e);
+                }
+                else
+                {
+                    // Append all words from the given trie's children.
+                    for(auto const& p : t.children_)
                     {
                         f(p.second);
                     }
-                }
-                
-                // Append all words from the given trie.
-                auto const w = t.words_;
-                matches.insert(matches.end(), w.begin(), w.end());
-                
-                // Recursively call traverse with the given phoneme from the given trie's children.
-                if(m != t.children_.end())
-                {
-                    traverse(m->second, std::next(b), e);
                 }
             };
             
