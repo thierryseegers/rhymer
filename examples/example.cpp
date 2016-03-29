@@ -9,7 +9,7 @@ using namespace std;
 
 int main()
 {
-    rhymer r(ifstream("cmudict_SPHINX_40.txt"));
+    rhymer r(ifstream("cmudict_SPHINX_40.txt"), ifstream("cmudict-0.7b.phones"));
     
     string word;
     cin >> word;
