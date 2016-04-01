@@ -98,6 +98,7 @@ public:
         }
     }
     
+    // Returns words that rhyme with given word, matching stress or not.
     std::vector<std::string> rhymes(std::string const& word, bool const match_stress = true) const
     {
         std::vector<std::string> matches;
@@ -138,6 +139,24 @@ public:
     phonemes pronunciation(std::string const& word) const
     {
         return dictionary_.at(word);
+    }
+    
+    // Returns list of alternate pronunciations of a given word.
+    std::vector<std::string> alternates(std::string const& word) const
+    {
+        std::vector<std::string> alternates;
+        
+        int n = 1;
+        std::string alternate = word + "(" + std::to_string(n) + ")";
+        
+        while(dictionary_.find(alternate) != dictionary_.end())
+        {
+            alternates.push_back(alternate);
+            
+            alternate = word + "(" + std::to_string(++n) + ")";
+        }
+        
+        return alternates;
     }
     
 private:
