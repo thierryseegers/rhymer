@@ -9,13 +9,13 @@ using namespace std;
 
 int main()
 {
-    rhymer r(ifstream("cmudict_SPHINX_40.txt"), ifstream("cmudict-0.7b.phones"));
+    rhymer r(ifstream("cmudict-0.7b"), ifstream("cmudict-0.7b.phones"));
     
     string word;
     cin >> word;
     
     auto const pronunciation = r.pronunciation(word);
-    auto const rhymes = r.rhymes(word);
+    auto const rhymes = r.rhymes(word, true);
     
     for(auto const& rhyme : rhymes)
     {
