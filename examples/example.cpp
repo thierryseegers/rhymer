@@ -15,19 +15,30 @@ int main()
     cin >> word;
     
     auto const pronunciation = r.pronunciation(word);
-    auto const rhymes = r.rhymes(word, true);
+    auto const rhymes = r.rhymes(word, false);
     
+    map<int, vector<string>, greater<>> matches;
     for(auto const& rhyme : rhymes)
     {
-        cout << rhyme << '\t';
-        
         auto const p = r.pronunciation(rhyme);
-        copy(p.begin(), p.end(), ostream_iterator<rhymer::phoneme>(cout, " "));
-        
         auto const score = distance(p.rbegin(), mismatch(p.rbegin(), p.rend(), pronunciation.rbegin(), pronunciation.rend()).first);
-        cout << '[' << score << ']' << endl;
+        
+        matches[score].push_back(rhyme);
     }
     
+    for(auto const match : matches)
+    {
+        for(auto const rhyme : match.second)
+        {
+            cout << '[' << match.first << ']' << ' ' << rhyme << '\t';
+        
+            auto const p = r.pronunciation(rhyme);
+            copy(p.begin(), p.end(), ostream_iterator<rhymer::phoneme>(cout, " "));
+
+            cout << endl;
+        }
+    }
+
     cout << rhymes.size() << endl;
     
     return 0;
