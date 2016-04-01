@@ -40,39 +40,19 @@
 
 namespace std
 {
-    istream& operator>>(istream&, array<char, 2>&);
+    istream& operator>>(istream&, array<char, 3>&);
     
-    ostream& operator<<(ostream&, array<char, 2> const&);
+    ostream& operator<<(ostream&, array<char, 3> const&);
 }
 
 class rhymer
 {
 public:
-    using phoneme = std::array<char, 2>;
+    using phoneme = std::array<char, 3>;
     using phonemes = std::vector<phoneme>;
     
     rhymer(std::ifstream&& phoneme_dictionary, std::ifstream&& phonemes_description)
     {
-        // Build trie to map phonemes to words.
-        std::string line, word;
-        std::stringstream ss;
-        phonemes pronunciation;
-        
-        while(getline(phoneme_dictionary, line))
-        {
-            ss.clear();
-            ss.str(line);
-            
-            ss >> word;
-            transform(word.begin(), word.end(), word.begin(), ::tolower);
-            pronunciation.assign(std::istream_iterator<phoneme>(ss), std::istream_iterator<phoneme>());
-
-            dictionary_[word] = pronunciation;
-
-            reverse(pronunciation.begin(), pronunciation.end());
-            lookup_.insert(pronunciation)->words_.push_back(word);
-        }
-
         // Save which phonemes represent vowels.
         phoneme p;
         std::string description;
@@ -87,75 +67,70 @@ public:
                 vowels_.push_back(p);
             }
         }
+        
+        // Map words in reverse order from their last phoneme to their last vowel phoneme.
+        std::string line, word;
+        std::stringstream ss;
+        phonemes pronunciation;
+        
+        while(getline(phoneme_dictionary, line))
+        {
+            ss.clear();
+            ss.str(line);
+            
+            if(line.substr(0, 3) != ";;;")
+            {
+                ss >> word;
+                transform(word.begin(), word.end(), word.begin(), ::tolower);
+                pronunciation.assign(std::istream_iterator<phoneme>(ss), std::istream_iterator<phoneme>());
+
+                dictionary_[word] = pronunciation;
+                
+                // Get a reverse iterator one past last vowel sound.
+                auto v = std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
+                                            {
+                                                return a[0] == b[0] && a[1] == b[1];
+                                            });
+                
+                // Navigate base trie from last phoneme to v and copy word in the target.
+                lookup_.insert(pronunciation.crbegin(), std::next(v))->words_.push_back(word);
+            }
+        }
     }
     
-    std::vector<std::string> rhymes(std::string const& word) const
+    // Returns words that rhyme with given word, matching stress or not.
+    std::vector<std::string> rhymes(std::string const& word, bool const match_stress = true) const
     {
         std::vector<std::string> matches;
-        
-        auto const i = dictionary_.find(word);
-        
-        if(i != dictionary_.end())
+
+        auto const w = dictionary_.find(word);
+        if(w != dictionary_.end())
         {
-            std::function<void (trie const&, phonemes::const_reverse_iterator, phonemes::const_reverse_iterator)> traverse;
-            traverse = [&](trie const& t, phonemes::const_reverse_iterator b, phonemes::const_reverse_iterator e)
+            phonemes const pronunciation = w->second;
+            
+            // Get a reverse iterator to the last vowel sound.
+            auto const v = std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
+                                              {
+                                                  return a[0] == b[0] && a[1] == b[1];
+                                              });
+            
+            // Navigate base trie from the last phoneme up to that vowel.
+            trie const *const t = lookup_.find(pronunciation.crbegin(), v);
+            
+            // For each stress marker we need to match, find that vowel sound in t and copy its words.
+            auto const stresses = match_stress ? std::vector<char>{(*v)[2]} : std::vector<char>{'0', '1', '2'};
+            for(char const stress : stresses)
             {
-                // Recursive function to copy all words from a trie, starting with its children.
-                std::function<void (trie const&)> f;
-                f = [&](trie const& s)
+                auto const s = t->children_.find({{(*v)[0], (*v)[1], stress}});
+                if(s != t->children_.end())
                 {
-                    for(auto const& p : s.children_)
-                    {
-                        f(p.second);
-                    }
-                    
-                    matches.insert(matches.end(), s.words_.begin(), s.words_.end());
-                };
-                
-                if(b != e)
-                {
-                    // Append all words from the given trie's children, skipping over the given phoneme.
-                    auto const m = t.children_.find(*b);
-                    
-                    for(auto const& p : t.children_)
-                    {
-                        if(p.first != m->first)
-                        {
-                            f(p.second);
-                        }
-                    }
-                    
-                    // Append all words from the given trie.
-                    auto const w = t.words_;
-                    matches.insert(matches.end(), w.begin(), w.end());
-                    
-                    // Recursively call traverse with the given phoneme from the given trie's children.
-                    traverse(m->second, std::next(b), e);
+                    auto const i = matches.insert(matches.end(), s->second.words_.begin(), s->second.words_.end());
+                    std::inplace_merge(matches.begin(), i, matches.end());
                 }
-                else
-                {
-                    // Append all words from the given trie's children.
-                    for(auto const& p : t.children_)
-                    {
-                        f(p.second);
-                    }
-                }
-            };
+            }
             
-            phonemes const pronunciation = i->second;
-            
-            // Get a reverse iterator one past last vowel sound.
-            auto const v = std::next(std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend()));
-            
-            // Navigate the trie from the last phoneme of the pronunciation to that vowel.
-            trie const* t = &lookup_;
-            for_each(pronunciation.crbegin(), v, [&](phoneme const& p)
-                     {
-                         t = &t->children_.find(p)->second;
-                     });
-            
-            // Find all words within that trie.
-            traverse(*t, v, pronunciation.crend());
+            // Remove the given word from the matches.
+            matches.erase(std::lower_bound(matches.begin(), matches.end(), word));
         }
         
         return matches;
@@ -166,6 +141,24 @@ public:
         return dictionary_.at(word);
     }
     
+    // Returns list of alternate pronunciations of a given word.
+    std::vector<std::string> alternates(std::string const& word) const
+    {
+        std::vector<std::string> alternates;
+        
+        int n = 1;
+        std::string alternate = word + "(" + std::to_string(n) + ")";
+        
+        while(dictionary_.find(alternate) != dictionary_.end())
+        {
+            alternates.push_back(alternate);
+            
+            alternate = word + "(" + std::to_string(++n) + ")";
+        }
+        
+        return alternates;
+    }
+    
 private:
     struct trie
     {
@@ -174,15 +167,29 @@ private:
         {
             return &children_[p];
         }
-        
-        trie* insert(phonemes const& p)
+
+        template<typename I>
+        trie* insert(I begin, I end)
         {
             trie *t = this;
             
-            for(phoneme const& s : p)
+            for(; begin != end; ++begin)
             {
-                t = t->insert(s);
-            };
+                t = t->insert(*begin);
+            }
+            
+            return t;
+        }
+        
+        template<typename I>
+        trie const* find(I begin, I end) const
+        {
+            trie const* t = this;
+            
+            for(; begin != end; ++begin)
+            {
+                t = &(t->children_.find(*begin)->second);
+            }
             
             return t;
         }
@@ -202,13 +209,22 @@ namespace std
     {
         i >> p[0];
         
-        if(isalpha(i.peek()))
+        if(isalnum(i.peek()))
         {
             i >> p[1];
+            
+            if(isalnum(i.peek()))
+            {
+                i >> p[2];
+            }
+            else
+            {
+                p[2] = '\0';
+            }
         }
         else
         {
-            p[1] = '\0';
+            p[1] = p[2] = '\0';
         }
         
         return i;
@@ -216,6 +232,6 @@ namespace std
     
     ostream& operator<<(ostream& o, rhymer::phoneme const& p)
     {
-        return o << p[0] << p[1];
+        return o << p[0] << p[1] << p[2];
     }
 }
