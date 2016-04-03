@@ -81,7 +81,6 @@ public:
             if(line.substr(0, 3) != ";;;")
             {
                 ss >> word;
-                transform(word.begin(), word.end(), word.begin(), ::tolower);
                 pronunciation.assign(std::istream_iterator<phoneme>(ss), std::istream_iterator<phoneme>());
 
                 dictionary_[word] = pronunciation;
@@ -99,10 +98,11 @@ public:
     }
     
     // Returns words that rhyme with given word, matching stress or not.
-    std::vector<std::string> rhymes(std::string const& word, bool const match_stress = true) const
+    std::vector<std::string> rhymes(std::string word, bool const match_stress = true) const
     {
         std::vector<std::string> matches;
 
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         auto const w = dictionary_.find(word);
         if(w != dictionary_.end())
         {
@@ -136,16 +136,18 @@ public:
         return matches;
     }
     
-    phonemes pronunciation(std::string const& word) const
+    phonemes pronunciation(std::string word) const
     {
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         return dictionary_.at(word);
     }
     
     // Returns list of alternate pronunciations of a given word.
-    std::vector<std::string> alternates(std::string const& word) const
+    std::vector<std::string> alternates(std::string word) const
     {
         std::vector<std::string> alternates;
         
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         int n = 1;
         std::string alternate = word + "(" + std::to_string(n) + ")";
         
