@@ -87,13 +87,13 @@ public:
                 dictionary_[word] = pronunciation;
                 
                 // Get a reverse iterator one past last vowel sound.
-                auto v = std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
-                                            {
-                                                return a[0] == b[0] && a[1] == b[1];
-                                            });
+                auto const v = std::next(std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
+                                                            {
+                                                                return a[0] == b[0] && a[1] == b[1];
+                                                            }));
                 
                 // Navigate base trie from last phoneme to v and copy word in the target.
-                lookup_.insert(pronunciation.crbegin(), std::next(v))->words_.push_back(word);
+                lookup_.insert(pronunciation.crbegin(), v)->words_.push_back(word);
             }
         }
     }
