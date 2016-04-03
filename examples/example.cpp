@@ -26,6 +26,10 @@ int main()
         matches[score].push_back(rhyme);
     }
     
+    cout << word << '\t';
+    copy(pronunciation.begin(), pronunciation.end(), ostream_iterator<rhymer::phoneme>(cout, " "));
+    cout << endl;
+    
     for(auto const match : matches)
     {
         for(auto const rhyme : match.second)
