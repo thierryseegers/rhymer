@@ -81,28 +81,28 @@ public:
             if(line.substr(0, 3) != ";;;")
             {
                 ss >> word;
-                transform(word.begin(), word.end(), word.begin(), ::tolower);
                 pronunciation.assign(std::istream_iterator<phoneme>(ss), std::istream_iterator<phoneme>());
 
                 dictionary_[word] = pronunciation;
                 
                 // Get a reverse iterator one past last vowel sound.
-                auto v = std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
-                                            {
-                                                return a[0] == b[0] && a[1] == b[1];
-                                            });
+                auto const v = std::next(std::find_first_of(pronunciation.crbegin(), pronunciation.crend(), vowels_.cbegin(), vowels_.cend(), [](phoneme const& a, phoneme const& b)
+                                                            {
+                                                                return a[0] == b[0] && a[1] == b[1];
+                                                            }));
                 
                 // Navigate base trie from last phoneme to v and copy word in the target.
-                lookup_.insert(pronunciation.crbegin(), std::next(v))->words_.push_back(word);
+                lookup_.insert(pronunciation.crbegin(), v)->words_.push_back(word);
             }
         }
     }
     
     // Returns words that rhyme with given word, matching stress or not.
-    std::vector<std::string> rhymes(std::string const& word, bool const match_stress = true) const
+    std::vector<std::string> rhymes(std::string word, bool const match_stress = true) const
     {
         std::vector<std::string> matches;
 
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         auto const w = dictionary_.find(word);
         if(w != dictionary_.end())
         {
@@ -136,16 +136,18 @@ public:
         return matches;
     }
     
-    phonemes pronunciation(std::string const& word) const
+    phonemes pronunciation(std::string word) const
     {
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         return dictionary_.at(word);
     }
     
     // Returns list of alternate pronunciations of a given word.
-    std::vector<std::string> alternates(std::string const& word) const
+    std::vector<std::string> alternates(std::string word) const
     {
         std::vector<std::string> alternates;
         
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
         int n = 1;
         std::string alternate = word + "(" + std::to_string(n) + ")";
         
@@ -169,7 +171,7 @@ private:
         }
 
         template<typename I>
-        trie* insert(I begin, I end)
+        trie* insert(I begin, I const end)
         {
             trie *t = this;
             
@@ -182,7 +184,7 @@ private:
         }
         
         template<typename I>
-        trie const* find(I begin, I end) const
+        trie const* find(I begin, I const end) const
         {
             trie const* t = this;
             
@@ -194,12 +196,12 @@ private:
             return t;
         }
         
-        std::map<phoneme, trie> children_;
-        std::vector<std::string> words_;
+        std::map<const phoneme, trie> children_;
+        std::vector<const std::string> words_;
     } lookup_;
     
     phonemes vowels_;
-    std::map<std::string, phonemes> dictionary_;
+    std::map<const std::string, phonemes> dictionary_;
 };
 
 
