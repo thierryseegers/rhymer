@@ -171,7 +171,7 @@ private:
         }
 
         template<typename I>
-        trie* insert(I begin, I end)
+        trie* insert(I begin, I const end)
         {
             trie *t = this;
             
@@ -184,7 +184,7 @@ private:
         }
         
         template<typename I>
-        trie const* find(I begin, I end) const
+        trie const* find(I begin, I const end) const
         {
             trie const* t = this;
             
@@ -196,12 +196,12 @@ private:
             return t;
         }
         
-        std::map<phoneme, trie> children_;
-        std::vector<std::string> words_;
+        std::map<const phoneme, trie> children_;
+        std::vector<const std::string> words_;
     } lookup_;
     
     phonemes vowels_;
-    std::map<std::string, phonemes> dictionary_;
+    std::map<const std::string, phonemes> dictionary_;
 };
 
 
