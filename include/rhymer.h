@@ -234,6 +234,6 @@ namespace std
     
     ostream& operator<<(ostream& o, rhymer::phoneme const& p)
     {
-        return o << p[0] << p[1] << p[2];
+        return o << p[0] << (p[1] ? string(1, p[1]) : "") << (p[2] ? string(1, p[2]) : "");
     }
 }
