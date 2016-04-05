@@ -21,7 +21,10 @@ int main()
     for(auto const& rhyme : rhymes)
     {
         auto const p = r.pronunciation(rhyme);
-        auto const score = distance(p.rbegin(), mismatch(p.rbegin(), p.rend(), pronunciation.rbegin(), pronunciation.rend()).first);
+        auto const score = distance(p.rbegin(), mismatch(p.rbegin(), p.rend(), pronunciation.rbegin(), pronunciation.rend(), [](rhymer::phoneme const& a, rhymer::phoneme const& b)
+                                                         {
+                                                             return a[0] == b[0] && a[1] == b[1];
+                                                         }).first);
         
         matches[score].push_back(rhyme);
     }
